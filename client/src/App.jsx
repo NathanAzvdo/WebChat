@@ -7,9 +7,9 @@ function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<chat/>} />
-        <Route path="/register" element={<register/>} />
-        <Route path="/login" element={<login/>} />
+        <Route path="/" element={chat} />
+        <Route path="/register" element={register} />
+        <Route path="/login" element={login} />
         
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

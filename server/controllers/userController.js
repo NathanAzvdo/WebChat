@@ -10,42 +10,40 @@ const createToken = (_id) => {
 };
 
 const registerUser = async function (req, res) {
+    
     try {
         const { name, email, password } = req.body;
+        let erros = [];
         
-        // Check if user with the same email already exists
         let existingUser = await User.findOne({ email: email });
-        console.log("Existing User:", existingUser); 
         if (existingUser) {
             return res.status(400).json({ error: 'User with this email already exists!' });
         }
         
-        // Validate input fields
-        if (!name || !email || !password) {
-            return res.status(400).json({ error: 'All fields are required!' });
+        const validations = {
+            name:{condition:!name || name.length<5 || name==null, message:"The name must have at least 5 characters"},
+            email:{condition:!validator.isEmail(email) , message:"Email must be a valid email!"},
+            password:{condition: !validator.isStrongPassword(password), message:"Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one special character."}
         }
-        if (!validator.isEmail(email)) {
-            return res.status(400).json({ error: 'Email must be a valid email!' });
+        Object.entries(validations).forEach(function([
+            field,{condition,message}
+        ]){
+            if(condition){
+                erros.push({texto:message})
+            }
+        })
+
+        if(erros.length>0){
+            res.status(400).json(erros)
         }
-        if (validator.isStrongPassword(password)) {
-            return res.status(400).json({ error: 'Password must be a strong password!' });
+        else{
+            const newUser = new User({ name, email, password });        
+            const salt = await bcrypt.genSalt(10);
+            newUser.password = await bcrypt.hash(newUser.password, salt);
+            await newUser.save();
+            const token = createToken(newUser._id);
+            res.status(200).json({ _id: newUser._id, name, email, token });
         }
-
-        // Create a new user instance
-        const newUser = new User({ name, email, password });
-
-        // Hash the password
-        const salt = await bcrypt.genSalt(10);
-        newUser.password = await bcrypt.hash(newUser.password, salt);
-
-        // Save the new user to the database
-        await newUser.save();
-
-        // Create JWT token
-        const token = createToken(newUser._id);
-
-        // Respond with user data and token
-        res.status(200).json({ _id: newUser._id, name, email, token });
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ error: 'Server error' });
